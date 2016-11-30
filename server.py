@@ -7,8 +7,8 @@
 from socket import *
 from threading import *
 from SocketServer import *
-from select import *
-from sys import *
+import select
+import sys
 
 class Server:
 
@@ -31,14 +31,15 @@ class Server:
 
     def run(self):
         self.open_socket()
-        input = [self.server, sys.stdin]
+        input = [self.server]
         running = 1
+        print "Server running"
         while running:
-            inputready, outputready, exceptready = select(input, [], [])
+            inputready, outputready, exceptready = select.select(input, [], [])
 
             for s in inputready:
                 if s == self.server:
-                    c = ClientThread(self.server.accept())
+                    c = Client(self.server.accept())
                     c.start()
                     self.threads.append(c)
 
@@ -51,20 +52,21 @@ class Server:
             c.join()
                 
 
-class ClientThread(Thread):
+class Client(Thread):
 
-    def __init__(self, (ip, port)):
+    def __init__(self, (client, address)):
         Thread.__init__(self)
-        self.ip = ip
-        self.port = port
-        print ("[+] New server socket thread started for " + ip + ":" + str(port))
+        self.client = client
+        self.address = address
+        print "Connection from new client"
 
     def run(self):
         running = 1
         while running:
             data = self.client.recv(1024)
             if data:
-                self.client.send(data)
+                self.client.send("echo" + data)
+                print "Server received data: ", data
             else:
                 self.client.close()
                 running = 0
