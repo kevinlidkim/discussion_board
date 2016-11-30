@@ -12,6 +12,7 @@ import sys
 import json
 
 user_map = {}
+group_map = {}
 
 # Server class
 class Server:
@@ -74,13 +75,27 @@ class Client(Thread):
               args = data.split( )
 
               if loggedIn:
-                self.client.send('You are logged in')
+
+                if (args[0] == "ag"):
+                  self.client.send(allGroups())
+
+                elif (args[0] == "logout"):
+                  self.client.send("Logging out")
+                  self.client.close()
+                  running = 0
+                  
+                else:
+                  self.client.send("Command not recgonized")
 
               elif (args[0] == "login"):
-                user_id = args[1]
-                if (login(user_id)):
-                  self.client.send("Successfully logged in")
-                  loggedIn = True
+
+                if (len(args) > 1):
+                  user_id = args[1]
+                  if (login(user_id)):
+                    self.client.send("Successfully logged in")
+                    loggedIn = True
+                  else:
+                    self.client.send("Failed to login")
                 else:
                   self.client.send("Failed to login")
 
@@ -134,13 +149,24 @@ def login(user_id):
     return False
 
 # Loads json file
-def loadJson():
+def loadGroups():
   with open('groups.json') as json_data:
-    d = json.load(json_data)
-    print(d)
+    groups = json.load(json_data)
+    for group in groups:
+      group_map[group['id']] = group['name']
+
+# Prints out all groups
+def allGroups():
+  s = ""
+  for group in group_map:
+    s+=str(group)
+    s+=". ( ) "
+    s+=str(group_map[group])
+    s+="\n"
+  return s
 
 # Main method
 if __name__ == "__main__":
-  # loadJson()
+  loadGroups()
   s = Server()
   s.run()
