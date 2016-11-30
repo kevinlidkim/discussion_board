@@ -10,6 +10,8 @@ from SocketServer import *
 import select
 import sys
 
+user_map = {}
+
 class Server:
 
     def __init__(self):
@@ -62,14 +64,69 @@ class Client(Thread):
 
     def run(self):
         running = 1
+        loggedIn = False
         while running:
             data = self.client.recv(1024)
             if data:
-                self.client.send("echo" + data)
-                print "Server received data: ", data
+
+              if loggedIn:
+                self.client.send('You are logged in')
+
+              elif (data == "login"):
+                self.client.send("Enter user id")
+                user_id = self.client.recv(1024)
+                if (login(user_id)):
+                  self.client.send("Successfully logged in")
+                  loggedIn = True
+                else:
+                  self.client.send("Failed to login")
+
+              else:
+                self.client.send(data)
+
             else:
                 self.client.close()
                 running = 0
+
+
+class User(object):
+  id = ""
+
+  def __init__(self, id):
+    self.id = id
+    print "User created with id ", self.id
+
+
+class Group(object):
+  id = ""
+  name = ""
+
+  def __init__(self, id, name):
+    self.id = id
+    self.name = name
+    print "Group created with id ", self.id, " and name ", self.name
+
+
+class Post(object):
+  id = ""
+  subject = ""
+  content = ""
+
+  def __init__(self, id, subject, content):
+    self.id = id
+    self.subject = subject
+    self.content = content
+
+
+def login(user_id):
+  if (user_map.get(user_id) == None):
+    user = User(user_id)
+    user_map[user_id] = user
+    return True
+  else:
+    print "User already logged in"
+    return False
+
 
 if __name__ == "__main__":
     s = Server()
