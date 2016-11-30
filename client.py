@@ -11,6 +11,7 @@ client.connect((serverName, serverPort))
 while MESSAGE != 'exit':
     client.send(MESSAGE)
     data = client.recv(BUFFER_SIZE)
+    print "Server: ", data
     MESSAGE = raw_input("Client: ")
 
 client.close()

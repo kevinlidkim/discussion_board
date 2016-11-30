@@ -69,20 +69,24 @@ class Client(Thread):
             data = self.client.recv(1024)
             if data:
 
+              args = data.split( )
+
               if loggedIn:
                 self.client.send('You are logged in')
 
-              elif (data == "login"):
-                self.client.send("Enter user id")
-                user_id = self.client.recv(1024)
+              elif (args[0] == "login"):
+                user_id = args[1]
                 if (login(user_id)):
                   self.client.send("Successfully logged in")
                   loggedIn = True
                 else:
                   self.client.send("Failed to login")
 
+              elif (args[0] == "help"):
+                self.client.send("HELP")
+
               else:
-                self.client.send(data)
+                self.client.send("Command not recognized")
 
             else:
                 self.client.close()
