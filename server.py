@@ -3,15 +3,17 @@
 #CSE 310
 #Discussion Board Server
 
-#import modules
+# Import modules
 from socket import *
 from threading import *
 from SocketServer import *
 import select
 import sys
+import json
 
 user_map = {}
 
+# Server class
 class Server:
 
     def __init__(self):
@@ -53,7 +55,7 @@ class Server:
         for c in self.threads:
             c.join()
                 
-
+# Client class
 class Client(Thread):
 
     def __init__(self, (client, address)):
@@ -92,7 +94,7 @@ class Client(Thread):
                 self.client.close()
                 running = 0
 
-
+# User class
 class User(object):
   id = ""
 
@@ -100,7 +102,7 @@ class User(object):
     self.id = id
     print "User created with id ", self.id
 
-
+# Group class
 class Group(object):
   id = ""
   name = ""
@@ -110,7 +112,7 @@ class Group(object):
     self.name = name
     print "Group created with id ", self.id, " and name ", self.name
 
-
+# Post class
 class Post(object):
   id = ""
   subject = ""
@@ -121,7 +123,7 @@ class Post(object):
     self.subject = subject
     self.content = content
 
-
+# Login method
 def login(user_id):
   if (user_map.get(user_id) == None):
     user = User(user_id)
@@ -131,7 +133,14 @@ def login(user_id):
     print "User already logged in"
     return False
 
+# Loads json file
+def loadJson():
+  with open('groups.json') as json_data:
+    d = json.load(json_data)
+    print(d)
 
+# Main method
 if __name__ == "__main__":
-    s = Server()
-    s.run()
+  # loadJson()
+  s = Server()
+  s.run()
