@@ -69,15 +69,18 @@ class Client(Thread):
         running = 1
         loggedIn = False
         while running:
+
             data = self.client.recv(1024)
             if data:
-
               args = data.split( )
 
               if loggedIn:
 
                 if (args[0] == "ag"):
-                  self.client.send(allGroups())
+                  if (args[1].isdigit()):
+                    allGroups(self.client, int(args[1]))
+                  else:
+                    allGroups(self.client, 5)
 
                 elif (args[0] == "logout"):
                   self.client.send("Logging out")
@@ -97,7 +100,7 @@ class Client(Thread):
                   else:
                     self.client.send("Failed to login")
                 else:
-                  self.client.send("Failed to login")
+                  self.client.send("User ID not specified")
 
               elif (args[0] == "help"):
                 self.client.send("HELP")
@@ -148,6 +151,14 @@ def login(user_id):
     print "User already logged in"
     return False
 
+# Load user data from json on login
+def loadUser
+  return
+
+# Save user data to json on logout
+def saveUser
+  return
+
 # Loads json file
 def loadGroups():
   with open('groups.json') as json_data:
@@ -155,15 +166,54 @@ def loadGroups():
     for group in groups:
       group_map[group['id']] = group['name']
 
-# Prints out all groups
-def allGroups():
+# All group command
+def allGroups(client, n):
+
+  index = 1
+  client.send(printGroups(index, n))
+
+  while True:
+    data = client.recv(1024)
+
+    if (data == "q"):
+      client.send("Exit ag")
+      break
+
+    elif (data == "n"):
+      index = index + n
+      if (index > len(group_map)):
+        client.send("Reached end of list -- Exit ag")
+        break
+      else:
+        client.send(printGroups(index, n))
+
+    elif (data == "s"):
+      client.send("need to implement - subscribe to group")
+
+    elif (data == "u"):
+      client.send("need to imeplement - unsubscribe from group")
+
+    else:
+      client.send("ag sub-command not recognized")
+
+  return
+
+# print group method from index to n
+def printGroups(index, n):
   s = ""
-  for group in group_map:
-    s+=str(group)
+
+  if (len(group_map) < n+index):
+    end = len(group_map)+1
+  else:
+    end = n+index
+
+  for i in range(index, end):
+    s+=str(i)
     s+=". ( ) "
-    s+=str(group_map[group])
+    s+=str(group_map[i])
     s+="\n"
   return s
+
 
 # Main method
 if __name__ == "__main__":
