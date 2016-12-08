@@ -144,12 +144,17 @@ class User(object):
     self.id = id
     print "User created with id ", self.id
 
-  def getSubGroup(self):
+  def getSubGroups(self):
     return self.subGroup
+
+  def setSubGroup(self, groups):
+    self.subGroup = groups
 
   def addSubGroup(self, group_id, group):
     self.subGroup[group_id] = group
 
+  def removeSubGroup(self, group_id):
+    del self.subGroup[group_id]
 
 
 # Group class
@@ -206,10 +211,15 @@ def loadUser(user_id):
   try:
     with open(fname) as json_data:
       data = json.load(json_data)
-      # print data
+
+      # Store the loaded data into user object
+      user = user_map[user_id]
+      # Check to see for groups subscribed to
+      if (data['subGroup']):
+        user.setSubGroup(data['subGroup'])
 
   except IOError:
-    print "Can't open file"
+    print "User data not found... starting from a blank slate"
     with open(fname, "w") as json_data:
       user_obj = {
         'userId': user_id
@@ -224,7 +234,7 @@ def saveUser(user_id):
 
   with open(fname, "w") as json_data:
     user = user_map[user_id]
-    subGroup = user.getSubGroup()
+    subGroup = user.getSubGroups()
     user_obj = {
       'userId': user_id,
       'subGroup': subGroup
@@ -284,7 +294,17 @@ def allGroups(user_id, client, n):
 
     # Unsubscribe from group
     elif (args[0] == "u"):
-      client.send("need to imeplement - unsubscribe from group")
+      unsubscribeToGroupString  = "Unsubscribed from groups "
+
+      # Go through list of arguments to find out all groups user wants to subscribe to
+      for i in range(1, len(args)):
+        # Make sure we are not out of bounds
+        if (int(args[i]) < (index+n)):
+          unsubscribeToGroupString+=str(args[i])
+          unsubscribeToGroupString+=(" ")
+          unsubscribeFromGroup(user_id, args[i])
+
+      client.send(unsubscribeToGroupString)
 
     # Sub-command not recognized in ag
     else:
@@ -317,6 +337,19 @@ def subscribeToGroup(user_id, group_id):
   user = user_map[user_id]
   group = group_map[int(group_id)]
   user.addSubGroup(group_id, group)
+
+
+
+# Unsubscribe to group method
+def unsubscribeFromGroup(user_id, group_id):
+  user = user_map[user_id]
+  groups = user.getSubGroups()
+
+  # Check to see if user is subscribed to group before unsubscribing
+  if (groups[group_id]):
+    user.removeSubGroup(group_id)
+
+
 
 # Main method
 if __name__ == "__main__":
