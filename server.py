@@ -13,6 +13,7 @@ import json
 
 user_map = {}
 group_map = {}
+help_message = "List of Commands:\n\nlogin userId -- logs you in with specified user id\n\nhelp -- prints out help message which lists all supported commands and subcommands\n\nag [n] -- lists all existing groups, n groups at a time\n\ts [n...] -- subscribes user to specified groups\n\tu [n...] -- unsubscribes user from specified groups\n\tn -- goes to next page of groups\n\tq -- exits ag command\n\nsg [n] -- lists all groups user is subscribed to, n groups at a time\n\tu [n...] -- unsubscribes user from specified groups\n\tn -- goes to next page of groups\n\tq -- exits sg command\n\nrg gname [n] -- displays status, time stamp, and subject line of specified group, n posts at a time\n\t[id] -- displays post of specified id\n\t\tn -- displays more lines of post\n\t\tq -- quits displaying post content\n\tr [x-y] -- marks posts x to y as read\n\tn -- goes to the next page of posts\n\tp -- post to the group\n\tq -- exits rg command\n\nlogout -- logs user out\n"
 
 
 
@@ -25,6 +26,7 @@ class Server:
     self.server = None
     self.host = ""
 
+  # Open socket for connection
   def open_socket(self):
     try:
       self.server = socket(AF_INET, SOCK_STREAM)
@@ -36,6 +38,7 @@ class Server:
       print "Could not open socket: " + message
       sys.exit(1)
 
+  # Run the server
   def run(self):
     self.open_socket()
     input = [self.server]
@@ -55,6 +58,7 @@ class Server:
           junk = sys.stdin.readline()
           running = 0
 
+    # Close the server and connections to all clients
     self.server.close()
     for c in self.threads:
       c.join()
@@ -97,6 +101,10 @@ class Client(Thread):
             logout(currentUser)
             self.client.close()
             running = 0
+
+          # Prints list of commands supported
+          elif (args[0] == "help"):
+            self.client.send(help_message)
             
           # Failed to recognize command while logged in
           else:
@@ -123,7 +131,7 @@ class Client(Thread):
 
         # Prints list of commands supported
         elif (args[0] == "help"):
-          self.client.send("HELP")
+          self.client.send(help_message)
 
         # Failed to recognize command while logged out
         else:
