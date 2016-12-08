@@ -14,111 +14,143 @@ import json
 user_map = {}
 group_map = {}
 
+
+
 # Server class
 class Server:
 
-    def __init__(self):
-        self.port = 7727
-        self.threads = []
-        self.server = None
-        self.host = ""
+  def __init__(self):
+    self.port = 7727
+    self.threads = []
+    self.server = None
+    self.host = ""
 
-    def open_socket(self):
-        try:
-            self.server = socket(AF_INET, SOCK_STREAM)
-            self.server.bind((self.host, self.port))
-            self.server.listen(5)
-        except socket.error, (value, message):
-            if self.server:
-                self.server.close()
-            print "Could not open socket: " + message
-            sys.exit(1)
-
-    def run(self):
-        self.open_socket()
-        input = [self.server]
-        running = 1
-        print "Server running"
-        while running:
-            inputready, outputready, exceptready = select.select(input, [], [])
-
-            for s in inputready:
-                if s == self.server:
-                    c = Client(self.server.accept())
-                    c.start()
-                    self.threads.append(c)
-
-                elif s == sys.stdin:
-                    junk = sys.stdin.readline()
-                    running = 0
-
+  def open_socket(self):
+    try:
+      self.server = socket(AF_INET, SOCK_STREAM)
+      self.server.bind((self.host, self.port))
+      self.server.listen(5)
+    except socket.error, (value, message):
+      if self.server:
         self.server.close()
-        for c in self.threads:
-            c.join()
-                
+      print "Could not open socket: " + message
+      sys.exit(1)
+
+  def run(self):
+    self.open_socket()
+    input = [self.server]
+    running = 1
+    print "Server running"
+    while running:
+      inputready, outputready, exceptready = select.select(input, [], [])
+
+      # Multiplex and select on input
+      for s in inputready:
+        if s == self.server:
+          c = Client(self.server.accept())
+          c.start()
+          self.threads.append(c)
+
+        elif s == sys.stdin:
+          junk = sys.stdin.readline()
+          running = 0
+
+    self.server.close()
+    for c in self.threads:
+      c.join()
+          
+
+
 # Client class
 class Client(Thread):
 
-    def __init__(self, (client, address)):
-        Thread.__init__(self)
-        self.client = client
-        self.address = address
-        print "Connection from new client"
+  def __init__(self, (client, address)):
+    Thread.__init__(self)
+    self.client = client
+    self.address = address
+    print "Connection from new client"
 
-    def run(self):
-        running = 1
-        loggedIn = False
-        while running:
+  def run(self):
+    running = 1
+    loggedIn = False
+    currentUser = 0
+    userJsonData = ""
 
-            data = self.client.recv(1024)
-            if data:
-              args = data.split( )
+    while running:
+      # Get input from client
+      data = self.client.recv(1024)
+      if data:
+        args = data.split( )
 
-              if loggedIn:
+        if loggedIn:
 
-                if (args[0] == "ag"):
-                  if (args[1].isdigit()):
-                    allGroups(self.client, int(args[1]))
-                  else:
-                    allGroups(self.client, 5)
+          # Run AG command if given a number afterwards
+          if (args[0] == "ag" and len(args) > 1):
+            if (args[1].isdigit()):
+              allGroups(currentUser, self.client, int(args[1]))
+            else:
+              allGroups(currentUser, self.client, 5)
 
-                elif (args[0] == "logout"):
-                  self.client.send("Logging out")
-                  self.client.close()
-                  running = 0
-                  
-                else:
-                  self.client.send("Command not recgonized")
+          # Log user out
+          elif (args[0] == "logout"):
+            self.client.send("Logging out")
+            logout(currentUser)
+            self.client.close()
+            running = 0
+            
+          # Failed to recognize command while logged in
+          else:
+            self.client.send("Command not recognized")
 
-              elif (args[0] == "login"):
+        # Log user in
+        elif (args[0] == "login"):
 
-                if (len(args) > 1):
-                  user_id = args[1]
-                  if (login(user_id)):
-                    self.client.send("Successfully logged in")
-                    loggedIn = True
-                  else:
-                    self.client.send("Failed to login")
-                else:
-                  self.client.send("User ID not specified")
+          # Get the user id being logged in
+          if (len(args) > 1):
+            user_id = args[1]
 
-              elif (args[0] == "help"):
-                self.client.send("HELP")
-
-              else:
-                self.client.send("Command not recognized")
+            if (login(user_id)):
+              self.client.send("Successfully logged in")
+              loggedIn = True
+              currentUser = user_id
+              loadUser(user_id)
 
             else:
-                self.client.close()
-                running = 0
+              self.client.send("Failed to login")
+
+          else:
+            self.client.send("User ID not specified")
+
+        # Prints list of commands supported
+        elif (args[0] == "help"):
+          self.client.send("HELP")
+
+        # Failed to recognize command while logged out
+        else:
+          self.client.send("Command not recognized")
+
+      else:
+          self.client.close()
+          running = 0
+
+
 
 # User class
 class User(object):
   id = ""
+  subGroup = {}
 
   def __init__(self, id):
     self.id = id
     print "User created with id ", self.id
+
+  def getSubGroup(self):
+    return self.subGroup
+
+  def addSubGroup(self, group_id, group):
+    self.subGroup[group_id] = group
+
+
 
 # Group class
 class Group(object):
@@ -129,6 +161,8 @@ class Group(object):
     self.id = id
     self.name = name
     print "Group created with id ", self.id, " and name ", self.name
+
+
 
 # Post class
 class Post(object):
@@ -141,7 +175,10 @@ class Post(object):
     self.subject = subject
     self.content = content
 
+
+
 # Login method
+# Logs user in by adding them to user_map dictionary of users
 def login(user_id):
   if (user_map.get(user_id) == None):
     user = User(user_id)
@@ -151,54 +188,113 @@ def login(user_id):
     print "User already logged in"
     return False
 
+
+
+# Logout method
+# Removes user from user_map dictionary and saves user data to json
+def logout(user_id):
+  saveUser(user_id)
+  del user_map[user_id]
+
+
+
 # Load user data from json on login
-def loadUser
-  return
+# Creates json file if not found
+def loadUser(user_id):
+  fname = "user" + user_id + ".json"
+
+  try:
+    with open(fname) as json_data:
+      data = json.load(json_data)
+      # print data
+
+  except IOError:
+    print "Can't open file"
+    with open(fname, "w") as json_data:
+      user_obj = {
+        'userId': user_id
+      }
+      json.dump(user_obj, json_data)
+
+
 
 # Save user data to json on logout
-def saveUser
-  return
+def saveUser(user_id):
+  fname = "user" + user_id + ".json"
 
-# Loads json file
+  with open(fname, "w") as json_data:
+    user = user_map[user_id]
+    subGroup = user.getSubGroup()
+    user_obj = {
+      'userId': user_id,
+      'subGroup': subGroup
+    }
+    json.dump(user_obj, json_data)
+
+
+
+# Loads json file for list of all groups
 def loadGroups():
   with open('groups.json') as json_data:
     groups = json.load(json_data)
     for group in groups:
       group_map[group['id']] = group['name']
 
-# All group command
-def allGroups(client, n):
 
+
+# All group command
+def allGroups(user_id, client, n):
+
+  # Prints out all groups initially
   index = 1
   client.send(printGroups(index, n))
 
   while True:
     data = client.recv(1024)
+    args = data.split( )
 
-    if (data == "q"):
+    # Exit ag with q sub command
+    if (args[0] == "q"):
       client.send("Exit ag")
       break
 
-    elif (data == "n"):
+    # Go to next list of groups
+    elif (args[0] == "n"):
       index = index + n
+      # Check for out of bounds error
       if (index > len(group_map)):
         client.send("Reached end of list -- Exit ag")
         break
       else:
         client.send(printGroups(index, n))
 
-    elif (data == "s"):
-      client.send("need to implement - subscribe to group")
+    # Subscribe to group
+    elif (args[0] == "s"):
+      subscribeToGroupString  = "Subscribed to groups "
 
-    elif (data == "u"):
+      # Go through list of arguments to find out all groups user wants to subscribe to
+      for i in range(1, len(args)):
+        # Make sure we are not out of bounds
+        if (int(args[i]) < (index+n)):
+          subscribeToGroupString+=str(args[i])
+          subscribeToGroupString+=(" ")
+          subscribeToGroup(user_id, args[i])
+
+      client.send(subscribeToGroupString)
+
+    # Unsubscribe from group
+    elif (args[0] == "u"):
       client.send("need to imeplement - unsubscribe from group")
 
+    # Sub-command not recognized in ag
     else:
       client.send("ag sub-command not recognized")
 
   return
 
-# print group method from index to n
+
+
+# Print group method from index to n
 def printGroups(index, n):
   s = ""
 
@@ -214,6 +310,13 @@ def printGroups(index, n):
     s+="\n"
   return s
 
+
+
+# Subscribe to group method
+def subscribeToGroup(user_id, group_id):
+  user = user_map[user_id]
+  group = group_map[int(group_id)]
+  user.addSubGroup(group_id, group)
 
 # Main method
 if __name__ == "__main__":
