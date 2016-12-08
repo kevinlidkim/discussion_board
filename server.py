@@ -90,14 +90,14 @@ class Client(Thread):
 
           # Run AG command if given a number afterwards
           if (args[0] == "ag" and len(args) > 1):
-            if (args[1].isdigit()):
+            if (args[1].isdigit() and int(args[1]) > 0):
               allGroups(currentUser, self.client, int(args[1]))
             else:
               allGroups(currentUser, self.client, 5)
 
           # Run SG command if giveen a number afterwards
           elif (args[0] == "sg" and len(args) > 1):
-            if (args[1].isdigit()):
+            if (args[1].isdigit() and int(args[1]) > 0):
               subscribedGroup(currentUser, self.client, int(args[1]))
             else:
               subscribedGroup(currentUser, self.client, 5)
