@@ -95,6 +95,13 @@ class Client(Thread):
             else:
               allGroups(currentUser, self.client, 5)
 
+          # Run SG command if giveen a number afterwards
+          elif (args[0] == "sg" and len(args) > 1):
+            if (args[1].isdigit()):
+              subscribedGroup(currentUser, self.client, int(args[1]))
+            else:
+              subscribedGroup(currentUser, self.client, 5)
+
           # Log user out
           elif (args[0] == "logout"):
             self.client.send("Logging out")
@@ -302,21 +309,75 @@ def allGroups(user_id, client, n):
 
     # Unsubscribe from group
     elif (args[0] == "u"):
-      unsubscribeToGroupString  = "Unsubscribed from groups "
+      unsubscribeFromGroupString  = "Unsubscribed from groups "
 
       # Go through list of arguments to find out all groups user wants to subscribe to
       for i in range(1, len(args)):
         # Make sure we are not out of bounds
         if (int(args[i]) < (index+n)):
-          unsubscribeToGroupString+=str(args[i])
-          unsubscribeToGroupString+=(" ")
+          unsubscribeFromGroupString+=str(args[i])
+          unsubscribeFromGroupString+=(" ")
           unsubscribeFromGroup(user_id, args[i])
 
-      client.send(unsubscribeToGroupString)
+      client.send(unsubscribeFromGroupString)
 
     # Sub-command not recognized in ag
     else:
       client.send("ag sub-command not recognized")
+
+  return
+
+
+
+# subscribed group command
+def subscribedGroup(user_id, client, n):
+
+  user = user_map[user_id]
+  subGroup = user.getSubGroups() 
+
+  # Convert subGroup to a list so we can use it to print
+  subGroupList = list(subGroup.keys())
+
+  # Prints out your subscribed groups initially
+  index = 1
+  client.send(printSubGroups(subGroupList, index, n))
+
+  while True:
+    data = client.recv(1024)
+    args = data.split( )
+
+    # Exit ag with q sub command
+    if (args[0] == "q"):
+      client.send("Exit sg")
+      break
+
+    # Go to next list of groups
+    elif (args[0] == "n"):
+      index = index + n
+      # Check for out of bounds error
+      if (index > len(subGroupList)):
+        client.send("Reached end of list -- Exit sg")
+        break
+      else:
+        client.send(printSubGroups(subGroupList, index, n))
+
+    # Unsubscribe from group
+    elif (args[0] == "u"):
+      unsubscribeFromGroupString  = "Unsubscribed from groups "
+
+      # Go through list of arguments to find out all groups user wants to subscribe to
+      for i in range(1, len(args)):
+        # Make sure we are not out of bounds
+        if (int(args[i]) < (index+n)):
+          unsubscribeFromGroupString+=str(args[i])
+          unsubscribeFromGroupString+=(" ")
+          unsubscribeFromSubGroup(subGroupList, user_id, args[i])
+
+      client.send(unsubscribeFromGroupString)
+
+    # Sub-command not recognized in ag
+    else:
+      client.send("sg sub-command not recognized")
 
   return
 
@@ -348,10 +409,45 @@ def subscribeToGroup(user_id, group_id):
 
 
 
-# Unsubscribe to group method
+# Unsubscribe from group method
 def unsubscribeFromGroup(user_id, group_id):
   user = user_map[user_id]
   groups = user.getSubGroups()
+
+  print group_id
+  print groups
+
+  # Check to see if user is subscribed to group before unsubscribing
+  if (groups[group_id]):
+    user.removeSubGroup(group_id)
+
+
+
+# Print subscribed group method from index to n
+def printSubGroups(subGroup, index, n):
+  s = ""
+
+  index = index - 1
+
+  if (len(subGroup) < n+index):
+    end = len(subGroup)
+  else:
+    end = n+index
+
+  for i in range(index, end):
+    s+=str(i+1)
+    s+=".     "
+    s+=str(group_map[int(subGroup[i])])
+    s+="\n"
+  return s
+
+
+
+# Unsubscribe from group method
+def unsubscribeFromSubGroup(group, user_id, group_index):
+  user = user_map[user_id]
+  groups = user.getSubGroups()
+  group_id = group[int(group_index) - 1]
 
   # Check to see if user is subscribed to group before unsubscribing
   if (groups[group_id]):
