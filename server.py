@@ -88,19 +88,27 @@ class Client(Thread):
 
         if loggedIn:
 
-          # Run AG command if given a number afterwards
-          if (args[0] == "ag" and len(args) > 1):
-            if (args[1].isdigit() and int(args[1]) > 0):
+          # Run AG command
+          if (args[0] == "ag"):
+            if (len(args) > 1 and args[1].isdigit() and int(args[1]) > 0):
               allGroups(currentUser, self.client, int(args[1]))
             else:
               allGroups(currentUser, self.client, 5)
 
-          # Run SG command if giveen a number afterwards
-          elif (args[0] == "sg" and len(args) > 1):
-            if (args[1].isdigit() and int(args[1]) > 0):
+          # Run SG command
+          elif (args[0] == "sg"):
+            if (len(args) > 1 and args[1].isdigit() and int(args[1]) > 0):
               subscribedGroup(currentUser, self.client, int(args[1]))
             else:
               subscribedGroup(currentUser, self.client, 5)
+
+          # Run RG command if given groupname
+          elif (args[0] == "rg" and len(args) > 1):
+            if (len(args) > 2 and args[2].isdigit() and int(args[2]) > 0):
+              readGroup(currentUser, self.client, args[1], args[2])
+            else:
+              readGroup(currentUser, self.client, args[1], 5)
+
 
           # Log user out
           elif (args[0] == "logout"):
@@ -346,7 +354,7 @@ def subscribedGroup(user_id, client, n):
     data = client.recv(1024)
     args = data.split( )
 
-    # Exit ag with q sub command
+    # Exit sg with q sub command
     if (args[0] == "q"):
       client.send("Exit sg")
       break
@@ -375,9 +383,72 @@ def subscribedGroup(user_id, client, n):
 
       client.send(unsubscribeFromGroupString)
 
-    # Sub-command not recognized in ag
+    # Sub-command not recognized in sg
     else:
       client.send("sg sub-command not recognized")
+
+  return
+
+
+
+# Read group command
+def readGroup(user_id, client, group_name, n):
+
+  # Prints out all groups initially
+  index = 1
+  client.send("display posts of group")
+  reading = False
+
+  while True:
+    data = client.recv(1024)
+    args = data.split( )
+
+    # If in reading mode
+    if reading:
+      # Go on to next lines
+      if (args[0] == "n"):
+        client.send("going onto next lines of post")
+
+      elif (args[0] == "q"):
+        client.send("quitting display post mode")
+        reading = False
+
+      else:
+        client.send("rg [id] sub-command not recognized")
+
+    # Not in reading mode
+    else:
+      # Exit rg with q sub command
+      if (args[0] == "q"):
+        client.send("Exit rg")
+        break
+
+      # Display post
+      elif (args[0].isdigit()):
+        client.send("entering display post mode")
+        reading = True
+
+      # Go to next list of posts
+      elif (args[0] == "n"):
+        index = index + n
+        # Check for out of bounds error
+        if (index > len(group_map)):
+          client.send("Reached end of list -- Exit rg")
+          break
+        else:
+          client.send("display next page of posts")
+
+      # Mark post as read
+      elif (args[0] == "r"):
+        client.send("marks a post as read")
+
+      # post to group
+      elif (args[0] == "p"):
+        client.send("post to group")
+
+      # Sub-command not recognized in rg
+      else:
+        client.send("rg sub-command not recognized")
 
   return
 
