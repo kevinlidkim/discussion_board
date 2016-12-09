@@ -272,7 +272,7 @@ def allGroups(user_id, client, n):
 
   # Prints out all groups initially
   index = 1
-  client.send(printGroups(index, n))
+  client.send(printGroups(user_id, index, n))
 
   while True:
     data = client.recv(1024)
@@ -291,7 +291,7 @@ def allGroups(user_id, client, n):
         client.send("Reached end of list -- Exit ag")
         break
       else:
-        client.send(printGroups(index, n))
+        client.send(printGroups(user_id, index, n))
 
     # Subscribe to group
     elif (args[0] == "s"):
@@ -384,8 +384,10 @@ def subscribedGroup(user_id, client, n):
 
 
 # Print group method from index to n
-def printGroups(index, n):
+def printGroups(user_id, index, n):
   s = ""
+  user = user_map[user_id]
+  subGroup = user.getSubGroups()
 
   if (len(group_map) < n+index):
     end = len(group_map)+1
@@ -394,7 +396,10 @@ def printGroups(index, n):
 
   for i in range(index, end):
     s+=str(i)
-    s+=". ( ) "
+    if (str(i) in subGroup):
+      s+=". (s) "
+    else:
+      s+=". ( ) "
     s+=str(group_map[i])
     s+="\n"
   return s
@@ -413,9 +418,6 @@ def subscribeToGroup(user_id, group_id):
 def unsubscribeFromGroup(user_id, group_id):
   user = user_map[user_id]
   groups = user.getSubGroups()
-
-  print group_id
-  print groups
 
   # Check to see if user is subscribed to group before unsubscribing
   if (groups[group_id]):
